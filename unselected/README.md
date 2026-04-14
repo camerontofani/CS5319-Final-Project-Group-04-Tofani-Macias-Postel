@@ -50,3 +50,13 @@ Repeat the same for the other services with ports:
 - group `8104`
 - notification `8105`
 - ai `8106`
+
+**Frontend** (from `frontend/`, uses port **5174** so it does not clash with the monolith ui on 5173):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Wireframe ui matches `selected/frontend` but api calls go to the services above (see `src/config.ts`). Optional env vars: `.env.example`.

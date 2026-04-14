@@ -1,29 +1,26 @@
-// temporary landing page for the monolith ui; wireframe screens will replace this
-import "./App.css";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { AppShell } from "./components/AppShell";
+import { AiRecommendationsPage } from "./pages/AiRecommendationsPage";
+import { LoginPage } from "./pages/LoginPage";
+import { OnboardingPage } from "./pages/OnboardingPage";
+import { ProgressPage } from "./pages/ProgressPage";
+import { StudyGroupsPage } from "./pages/StudyGroupsPage";
+import { StudyPlanPage } from "./pages/StudyPlanPage";
+import "./smartstudy.css";
 
-function App() {
+// wires each url to one screen (matches wireframes a–f)
+export default function App() {
   return (
-    <main style={{ maxWidth: 860, margin: "0 auto", padding: "2rem" }}>
-      <h1>SmartStudy - Selected Architecture</h1>
-      <p>Layered monolith (single backend app).</p>
-
-      <h2>Milestones</h2>
-      <ol>
-        <li>Authentication and onboarding</li>
-        <li>Study plan generation</li>
-        <li>Progress tracking dashboard</li>
-        <li>Study groups and check-ins</li>
-        <li>AI recommendations</li>
-        <li>Testing and architecture evaluation</li>
-      </ol>
-
-      <h2>API Base</h2>
-      <p>
-        Backend runs at <code>http://localhost:8000</code> and routes are under
-        <code> /api</code>.
-      </p>
-    </main>
+    <Routes>
+      <Route path="/" element={<LoginPage />} />
+      <Route element={<AppShell />}>
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/study-plan" element={<StudyPlanPage />} />
+        <Route path="/progress" element={<ProgressPage />} />
+        <Route path="/groups" element={<StudyGroupsPage />} />
+        <Route path="/ai" element={<AiRecommendationsPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
-
-export default App;

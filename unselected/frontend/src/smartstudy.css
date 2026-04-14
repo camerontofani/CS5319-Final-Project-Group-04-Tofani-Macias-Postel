@@ -1,0 +1,2 @@
+/* ui styles match the monolith wireframes; pulls the same css file so we do not maintain two huge copies */
+@import url("../../../selected/frontend/src/smartstudy.css");

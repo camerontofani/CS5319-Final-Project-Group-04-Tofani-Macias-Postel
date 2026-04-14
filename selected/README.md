@@ -37,3 +37,7 @@ cd frontend
 npm install
 npm run dev
 ```
+
+Opens on `http://localhost:5173` (see `src/pages/` for screens a–f).
+
+Optional: copy `.env.example` to `.env` if you change the api port.

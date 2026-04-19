@@ -1,52 +1,39 @@
-# Unselected: Microservices
+# Unselected: Monolith
 
-This version splits backend responsibilities into separate services.
+This version keeps all backend features inside one FastAPI app.
 
 ## Simple structure
 
-- `frontend/` - microservices UI (separate copy)
-- `gateway/` - API gateway app
-- `services/auth-service/`
-- `services/study-plan-service/`
-- `services/progress-service/`
-- `services/group-service/`
-- `services/notification-service/`
-- `services/ai-service/`
+- `frontend/` - React UI copy
+- `backend/app/main.py` - app entrypoint
+- `backend/app/api/` - HTTP routes
+- `backend/app/services/` - business logic by feature
 
 ## Current milestone shell
 
-- Milestone 1: gateway + auth service
-- Milestone 2: study plan service
-- Milestone 3: progress service
-- Milestone 4: group service
-- Milestone 5: AI service (+ optional notifications)
-- Milestone 6: cross-service testing and evaluation
+- Milestone 1: `POST /api/auth/signup`
+- Milestone 2: `POST /api/plans/generate`
+- Milestone 3: `POST /api/progress/log`
+- Milestone 4: `POST /api/groups/checkin`
+- Milestone 5: `POST /api/ai/recommend`
+- Milestone 6: testing and documentation (next)
 
-## Run (manual, one terminal per app)
+## Run
 
-Gateway (`8100`):
+Backend:
 
 ```bash
-cd gateway
+cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8100
+uvicorn app.main:app --reload --port 8000
 ```
 
-Auth (`8101`):
+Frontend:
 
 ```bash
-cd services/auth-service
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8101
+cd frontend
+npm install
+npm start
 ```
-
-Repeat the same for the other services with ports:
-- study-plan `8102`
-- progress `8103`
-- group `8104`
-- notification `8105`
-- ai `8106`

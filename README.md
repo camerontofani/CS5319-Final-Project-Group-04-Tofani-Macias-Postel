@@ -6,7 +6,7 @@ Two fully separate implementations of the same product, kept in one repo for eas
 
 | Folder | Architecture | Backend shape |
 |--------|----------------|---------------|
-| `selected/` | Layered monolith | One backend app |
-| `unselected/` | Microservices | Gateway + separate services |
+| `selected/` | Microservices | Gateway + separate services |
+| `unselected/` | Monolith | One backend app |
 
 No backend code is shared across these two folders.

@@ -28,7 +28,6 @@ const StudyGroups = () => {
     groupData,
     setGroupWeeklyGoal,
     setGroupMilestones,
-    appendGroupCheckin,
   } = useAppData();
 
   const [selectedId, setSelectedId] = useState(() => studyGroups[0]?.id ?? '');
@@ -85,7 +84,6 @@ const StudyGroups = () => {
         group_id: selected?.id,
         comment: text,
       });
-      if (selected?.id) appendGroupCheckin(selected.id, text);
       setComment('');
     } catch {
       /* surfaced via error */

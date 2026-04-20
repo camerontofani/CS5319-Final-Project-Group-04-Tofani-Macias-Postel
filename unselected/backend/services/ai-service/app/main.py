@@ -1,18 +1,24 @@
-# ai recommendations in one deployable; gateway calls this over http
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="AI Service", version="0.1.0")
+app = FastAPI(title="Recommendations Service", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "ai-service"}
+    return {"status": "ok", "service": "recommendations-service"}
 
 
-@app.post("/recommend")
+@app.post("/internal/recommend")
 def recommend(payload: dict):
-    topic = payload.get("topic", "General review")
+    topic = payload.get("topic", "your plan")
     return {
-        "message": "AI recommendation placeholder (Milestone 5)",
-        "recommendation": f"Focus on {topic} in short blocks and review weak topics first.",
+        "recommendation": f"Focus on {topic} in shorter sessions with breaks.",
+        "reason": "Balances workload using your recent activity.",
     }

@@ -64,10 +64,13 @@ function applyPlanToForm(ir, setters) {
 }
 
 const Onboarding = ({ setCurrentScreen }) => {
-  const { generatePlan, loading, plan, courseSetupDraft, setCourseSetupDraft } = useAppData();
+  const { generatePlan, loading, plan, courseSetupDraft, setCourseSetupDraft, appDataReady } = useAppData();
   const saving = loading.plan;
-  const lastAppliedPlanRef = useRef(null);
+  /** One-time hydrate from server plan/draft per mount — never re-run when draft PATCH echoes back. */
+  const formHydratedRef = useRef(false);
   const lastSyncedDraftJson = useRef('');
+  /** Always holds latest draftPayload so post-hydrate microtask can seed lastSyncedDraftJson correctly. */
+  const draftPayloadRef = useRef(null);
 
   const [step, setStep] = useState(1);
   const [courseRows, setCourseRows] = useState(['']);
@@ -81,34 +84,31 @@ const Onboarding = ({ setCurrentScreen }) => {
   const [aiPriority, setAiPriority] = useState(true);
   const [formError, setFormError] = useState(null);
 
-  // Hydrate once when this screen mounts. Do not depend on courseSetupDraft updates from sync below or
-  // applyPlanToForm and setCourseSetupDraft ping-pong forever (maximum update depth).
+  // Only when server snapshot is ready — do not depend on courseSetupDraft/plan or PATCH echoes retrigger this.
   useLayoutEffect(() => {
+    if (!appDataReady || formHydratedRef.current) return;
+    formHydratedRef.current = true;
     const ir = courseSetupDraft ?? plan?.input_received;
-    if (!ir) {
-      lastAppliedPlanRef.current = null;
-      return;
+    if (ir) {
+      applyPlanToForm(ir, {
+        setCourseRows,
+        setSlots,
+        setLearningStyles,
+        setSessionLength,
+        setBreakLength,
+        setDailyGoal,
+        setAiSmart,
+        setAiPractice,
+        setAiPriority,
+      });
     }
-    const sig = JSON.stringify({
-      c: ir.courses,
-      a: ir.availability,
-      p: ir.preferences,
+    // After hydrate (sync state updates flush), seed sync cursor so the draft useEffect does not PATCH
+    // stale empty defaults over the user's saved courses on the same tick as refresh.
+    queueMicrotask(() => {
+      lastSyncedDraftJson.current = JSON.stringify(draftPayloadRef.current);
     });
-    if (lastAppliedPlanRef.current === sig) return;
-    lastAppliedPlanRef.current = sig;
-    applyPlanToForm(ir, {
-      setCourseRows,
-      setSlots,
-      setLearningStyles,
-      setSessionLength,
-      setBreakLength,
-      setDailyGoal,
-      setAiSmart,
-      setAiPractice,
-      setAiPriority,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only initial courseSetupDraft/plan snapshot for this visit
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: hydrate once when appDataReady flips true
+  }, [appDataReady]);
 
   const toggleHour = useCallback((day, hour) => {
     setSlots((prev) => ({
@@ -164,12 +164,15 @@ const Onboarding = ({ setCurrentScreen }) => {
     ]
   );
 
+  draftPayloadRef.current = draftPayload;
+
   useEffect(() => {
+    if (!appDataReady) return;
     const json = JSON.stringify(draftPayload);
     if (json === lastSyncedDraftJson.current) return;
     lastSyncedDraftJson.current = json;
     setCourseSetupDraft(draftPayload);
-  }, [draftPayload, setCourseSetupDraft]);
+  }, [draftPayload, setCourseSetupDraft, appDataReady]);
 
   const setCourseAt = (index, value) => {
     setCourseRows((rows) => {

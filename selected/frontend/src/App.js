@@ -11,6 +11,7 @@ import { useAuth } from './auth/AuthContext';
 
 function AppShell() {
   const [currentScreen, setCurrentScreen] = useState('Study Plan');
+  const { user } = useAuth();
 
   return (
     <div className="flex bg-gray-50 min-h-screen">
@@ -20,7 +21,9 @@ function AppShell() {
         {currentScreen === 'Progress' && <Progress />}
         {currentScreen === 'AI Recommendations' && <AIRecommendations />}
         {currentScreen === 'Study Groups' && <StudyGroups />}
-        {currentScreen === 'Course Setup' && <Onboarding setCurrentScreen={setCurrentScreen} />}
+        {currentScreen === 'Course Setup' && (
+          <Onboarding key={user?.id} setCurrentScreen={setCurrentScreen} />
+        )}
       </main>
     </div>
   );

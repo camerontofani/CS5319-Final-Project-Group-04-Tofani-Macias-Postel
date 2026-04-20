@@ -11,6 +11,7 @@ from app.db.session import engine
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.models.user import User  # noqa: F401
+    from app.models.user_app_state import UserAppState  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     yield

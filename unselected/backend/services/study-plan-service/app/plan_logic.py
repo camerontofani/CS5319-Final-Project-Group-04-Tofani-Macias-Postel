@@ -1,4 +1,4 @@
-# Study plan from courses, hourly availability, and preferences.
+# Study plan from courses, hourly availability, and preferences (same as monolith).
 from typing import List, Tuple
 
 
@@ -33,8 +33,6 @@ def create_study_plan(payload: dict) -> dict:
     if not names:
         names = ["Course"]
 
-    # Collect every contiguous free block (day + hour range) across the week, then
-    # round-robin assign courses so every class appears across the schedule.
     slot_blocks: List[Tuple[str, int, int]] = []
     for row in availability:
         day = row.get("day") or ""
@@ -51,7 +49,6 @@ def create_study_plan(payload: dict) -> dict:
         start_time = f"{start_h:02d}:00"
         end_time = f"{min(end_h + 1, 22):02d}:00"
         span_hours = max(1, end_h - start_h + 1)
-        # Prefer the user's session length; don't inflate to a full clock hour (1h slot ≠ 60 min session).
         available_mins = span_hours * 60
         mins = max(30, min(session_len, available_mins))
         sample_tasks.append(

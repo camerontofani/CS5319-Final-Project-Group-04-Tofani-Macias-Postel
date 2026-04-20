@@ -1,106 +1,120 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAppData } from '../context/AppDataContext';
+
+function topicFromPlan(plan, courseSetupDraft) {
+  const prefs = courseSetupDraft ?? plan?.input_received;
+  const list = prefs?.courses?.map((c) => c.name).filter(Boolean) ?? [];
+  return list.length ? list.join(', ') : 'your plan';
+}
 
 const AIRecommendations = () => {
-  const [decision, setDecision] = useState('Pending');
+  const { fetchAi, aiResult, loading, plan, courseSetupDraft } = useAppData();
+  const aiLoading = loading.ai;
+  const [decision, setDecision] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedPlan, setEditedPlan] = useState(
-    'Move CS316 File Systems review from Saturday to Thursday to avoid burnout.'
-  );
+  const [editedText, setEditedText] = useState('');
+
+  useEffect(() => {
+    fetchAi({ topic: topicFromPlan(plan) }).catch(() => {});
+  }, [plan, fetchAi]);
+
+  useEffect(() => {
+    if (aiResult?.recommendation) {
+      setEditedText(String(aiResult.recommendation));
+    }
+  }, [aiResult]);
+
+  const refresh = async () => {
+    await fetchAi({ topic: topicFromPlan(plan, courseSetupDraft) });
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
-      <header>
-        <h2 className="text-2xl font-bold text-gray-800">AI Recommendations</h2>
-        <p className="text-gray-500">Personalized suggestions based on your recent activity and confidence trends.</p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Suggestions</h2>
+          <p className="text-gray-500 mt-1">Adjustments based on your plan and activity.</p>
+        </div>
+        <button
+          type="button"
+          onClick={refresh}
+          disabled={aiLoading}
+          className="self-start sm:self-auto px-4 py-2 rounded-xl border border-gray-200 text-gray-800 font-medium hover:bg-gray-50 disabled:opacity-60"
+        >
+          {aiLoading ? 'Updating...' : 'Refresh'}
+        </button>
       </header>
 
-      {/* Keep your original Stats Grid at the top - it looks great! */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <p className="text-xs uppercase text-gray-500 font-semibold">Weekly Priority</p>
-          <p className="text-xl font-bold text-gray-800 mt-2">Algorithm Mastery</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <p className="text-xs uppercase text-gray-500 font-semibold">Estimated Improvement</p>
-          <p className="text-xl font-bold text-green-600 mt-2">+14% Confidence</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <p className="text-xs uppercase text-gray-500 font-semibold">Suggested Sessions</p>
-          <p className="text-xl font-bold text-gray-800 mt-2">5 Sessions</p>
-        </div>
-      </div>
-
-      {/* NEW: The interactive Adjustment Panel (Required by Proposal Screen F) */}
       <div className="bg-indigo-900 text-white p-8 rounded-2xl shadow-xl">
-        <h3 className="text-xl font-bold mb-2">Smart Adjustment Suggestion</h3>
-        <p className="text-indigo-200 text-sm mb-6 italic">
-          "I've noticed a gap in Dynamic Programming. Let's redistribute your workload."
-        </p>
-        
+        <h3 className="text-xl font-bold mb-2">Suggestion</h3>
+        <p className="text-indigo-200 text-sm mb-6">{aiResult?.reason || 'We can tune your schedule based on what you tell us.'}</p>
+
         <div className="space-y-3 mb-8">
-          <div className="bg-white/10 p-4 rounded-xl border border-white/20 text-sm">
-            {editedPlan}
-          </div>
-          <div className="bg-white/10 p-4 rounded-xl border border-white/20 text-sm">
-            Add a 30-minute Practice Block for Recursion on Wednesday.
+          <div className="bg-white/10 p-4 rounded-xl border border-white/20 text-sm leading-relaxed">
+            {editedText || 'Your suggestion will load here.'}
           </div>
         </div>
 
         {isEditing && (
           <div className="mb-6">
-            <label className="block text-xs uppercase tracking-wide text-indigo-200 font-semibold mb-2">
-              Edit Suggestion
-            </label>
+            <label className="block text-xs uppercase tracking-wide text-indigo-200 font-semibold mb-2">Edit</label>
             <textarea
-              value={editedPlan}
-              onChange={(e) => setEditedPlan(e.target.value)}
-              className="w-full min-h-24 rounded-xl bg-white text-gray-800 p-3 text-sm outline-none"
+              value={editedText}
+              onChange={(e) => setEditedText(e.target.value)}
+              className="w-full min-h-28 rounded-xl bg-white text-gray-900 p-3 text-sm outline-none"
             />
             <button
+              type="button"
               onClick={() => setIsEditing(false)}
-              className="mt-3 bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold"
+              className="mt-3 bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
             >
-              Save Edit
+              Done
             </button>
           </div>
         )}
 
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
-            onClick={() => setDecision('Accepted')}
-            className="flex-1 bg-white text-indigo-900 font-bold py-3 rounded-xl hover:bg-indigo-50"
+            type="button"
+            onClick={() => setDecision('accepted')}
+            className="flex-1 bg-white text-indigo-900 font-semibold py-3 rounded-xl hover:bg-indigo-50"
           >
             Accept
           </button>
           <button
+            type="button"
             onClick={() => {
-              setDecision('Edited');
+              setDecision('edited');
               setIsEditing(true);
             }}
-            className="flex-1 bg-indigo-700 text-white font-bold py-3 rounded-xl border border-indigo-500"
+            className="flex-1 bg-indigo-700 text-white font-semibold py-3 rounded-xl border border-indigo-500 hover:bg-indigo-600"
           >
             Edit
           </button>
           <button
+            type="button"
             onClick={() => {
-              setDecision('Rejected');
+              setDecision('dismissed');
               setIsEditing(false);
             }}
-            className="px-4 py-3 text-indigo-300"
+            className="sm:px-6 py-3 text-indigo-200 font-medium hover:text-white"
           >
-            Reject
+            Dismiss
           </button>
         </div>
-        <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-indigo-200">
-          Current status: {decision}
-        </p>
+        {decision && (
+          <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-indigo-200">
+            {decision === 'accepted' && 'Accepted'}
+            {decision === 'edited' && 'Editing'}
+            {decision === 'dismissed' && 'Dismissed'}
+          </p>
+        )}
       </div>
 
-      {/* NEW: Practice Prompts (Required by Proposal Screen F) */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <h3 className="font-bold text-gray-800 mb-4 text-sm uppercase tracking-widest">AI Generated Practice Prompt</h3>
-        <div className="p-4 bg-gray-50 rounded-xl border-l-4 border-indigo-500 italic text-gray-700">
-          "What is the difference between an inode and a directory entry in a Unix file system?"
+        <h3 className="font-bold text-gray-800 mb-3 text-sm uppercase tracking-widest text-gray-500">Practice idea</h3>
+        <div className="p-4 bg-gray-50 rounded-xl border-l-4 border-indigo-500 text-gray-800 leading-relaxed">
+          {aiResult?.recommendation ? `Try: ${aiResult.recommendation}` : 'Log progress and refresh for a tailored prompt.'}
         </div>
       </div>
     </div>

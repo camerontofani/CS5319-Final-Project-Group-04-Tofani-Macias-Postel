@@ -1,14 +1,44 @@
-# optional: reminders and alerts (nice-to-have in the proposal)
+"""Demo notification service: in-memory event log (optional fan-out from gateway)."""
+
+from datetime import datetime, timezone
+from threading import Lock
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Notification Service", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+_events: list[dict] = []
+_lock = Lock()
+_MAX = 200
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "notification-service"}
+    return {"status": "ok", "service": "notification-service", "buffered_events": len(_events)}
 
 
-@app.post("/send")
-def send_notification(payload: dict):
-    return {"message": "Notification placeholder (Nice-to-have)", "payload": payload}
+@app.post("/internal/notify")
+def notify(payload: dict):
+    """Gateway can POST here after check-ins, plan generation, etc. (demo / optional)."""
+    entry = {
+        "receivedAt": datetime.now(timezone.utc).isoformat(),
+        **payload,
+    }
+    with _lock:
+        _events.append(entry)
+        if len(_events) > _MAX:
+            del _events[: len(_events) - _MAX]
+    return {"ok": True, "queued": True}
+
+
+@app.get("/internal/events")
+def list_events(limit: int = 50):
+    with _lock:
+        return {"events": _events[-limit:]}

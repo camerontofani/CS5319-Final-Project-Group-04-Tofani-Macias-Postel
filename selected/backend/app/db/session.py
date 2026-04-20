@@ -1,9 +1,11 @@
 from collections.abc import Generator
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-DATABASE_URL = "sqlite:///./smartstudy.db"
+DB_PATH = Path(__file__).resolve().parent.parent.parent / "smartstudy.db"
+DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
     DATABASE_URL,

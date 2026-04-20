@@ -27,8 +27,25 @@ function authHeaders(includeAuth) {
   return headers;
 }
 
+const REQUEST_TIMEOUT_MS = Number(process.env.REACT_APP_API_TIMEOUT_MS || 15000);
+
+async function withTimeoutFetch(url, options = {}) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (e) {
+    if (e && e.name === 'AbortError') {
+      throw new Error(`Request timed out after ${Math.round(REQUEST_TIMEOUT_MS / 1000)}s`);
+    }
+    throw e;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export async function apiGet(path, { auth = true } = {}) {
-  const res = await fetch(`${baseUrl()}${path}`, {
+  const res = await withTimeoutFetch(`${baseUrl()}${path}`, {
     headers: { ...authHeaders(auth) },
   });
   if (!res.ok) {
@@ -38,7 +55,7 @@ export async function apiGet(path, { auth = true } = {}) {
 }
 
 export async function apiPost(path, body, { auth = true } = {}) {
-  const res = await fetch(`${baseUrl()}${path}`, {
+  const res = await withTimeoutFetch(`${baseUrl()}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -53,7 +70,7 @@ export async function apiPost(path, body, { auth = true } = {}) {
 }
 
 export async function apiPatch(path, body, { auth = true } = {}) {
-  const res = await fetch(`${baseUrl()}${path}`, {
+  const res = await withTimeoutFetch(`${baseUrl()}${path}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',

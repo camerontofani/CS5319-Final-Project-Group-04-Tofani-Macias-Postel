@@ -1,4 +1,5 @@
 const TOKEN_KEY = 'smartstudy_access_token';
+const TIMEOUT_MS = 15000;
 
 export function getStoredToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -27,43 +28,54 @@ function authHeaders(includeAuth) {
   return headers;
 }
 
+function fetchWithTimeout(url, options) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(id)
+  );
+}
+
 export async function apiGet(path, { auth = true } = {}) {
-  const res = await fetch(`${baseUrl()}${path}`, {
-    headers: { ...authHeaders(auth) },
-  });
-  if (!res.ok) {
-    throw await buildError(res);
+  let res;
+  try {
+    res = await fetchWithTimeout(`${baseUrl()}${path}`, {
+      headers: { ...authHeaders(auth) },
+    });
+  } catch (e) {
+    throw new Error(e.name === 'AbortError' ? 'Request timed out' : 'Network error — is the server running?');
   }
+  if (!res.ok) throw await buildError(res);
   return res.json();
 }
 
 export async function apiPost(path, body, { auth = true } = {}) {
-  const res = await fetch(`${baseUrl()}${path}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders(auth),
-    },
-    body: JSON.stringify(body ?? {}),
-  });
-  if (!res.ok) {
-    throw await buildError(res);
+  let res;
+  try {
+    res = await fetchWithTimeout(`${baseUrl()}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders(auth) },
+      body: JSON.stringify(body ?? {}),
+    });
+  } catch (e) {
+    throw new Error(e.name === 'AbortError' ? 'Request timed out' : 'Network error — is the server running?');
   }
+  if (!res.ok) throw await buildError(res);
   return res.json();
 }
 
 export async function apiPatch(path, body, { auth = true } = {}) {
-  const res = await fetch(`${baseUrl()}${path}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders(auth),
-    },
-    body: JSON.stringify(body ?? {}),
-  });
-  if (!res.ok) {
-    throw await buildError(res);
+  let res;
+  try {
+    res = await fetchWithTimeout(`${baseUrl()}${path}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders(auth) },
+      body: JSON.stringify(body ?? {}),
+    });
+  } catch (e) {
+    throw new Error(e.name === 'AbortError' ? 'Request timed out' : 'Network error — is the server running?');
   }
+  if (!res.ok) throw await buildError(res);
   return res.json();
 }
 

@@ -44,6 +44,33 @@ function taskMatchesCourseList(task, courseNames) {
   return courseNames.some((n) => n.trim().toLowerCase() === lower);
 }
 
+function norm(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function isDeadlineUrgentForTask(item, deadlines) {
+  const taskName = norm(item.courseName);
+  const taskCode = norm(item.courseCode);
+  if (!taskName && !taskCode) return false;
+  return (deadlines || []).some((d) => {
+    const dd = daysUntil(d.date);
+    if (!Number.isFinite(dd) || dd < 0 || dd > 7) return false;
+    const dCode = norm(d.courseCode);
+    const dTitle = norm(d.title);
+    if (taskCode && dCode && (taskCode.includes(dCode) || dCode.includes(taskCode))) return true;
+    if (taskName && dCode && (taskName.includes(dCode) || dCode.includes(taskName))) return true;
+    if (taskName && dTitle && (taskName.includes(dTitle) || dTitle.includes(taskName))) return true;
+    return false;
+  });
+}
+
+function effectivePriority(item, deadlines) {
+  if (isDeadlineUrgentForTask(item, deadlines)) return 'high';
+  return item.priority || 'medium';
+}
+
 const ACCENTS = [
   'border-l-amber-400 bg-amber-50/30',
   'border-l-blue-500 bg-blue-50/30',
@@ -68,6 +95,7 @@ const Dashboard = ({ setCurrentScreen }) => {
   const [deadlineTitle, setDeadlineTitle] = useState('');
   const [deadlineDate, setDeadlineDate] = useState('');
   const [deadlineCourse, setDeadlineCourse] = useState('');
+  const [deadlineErr, setDeadlineErr] = useState('');
   const [selectedDate, setSelectedDate] = useState(() => new Date());
 
   const prefs = courseSetupDraft ?? plan?.input_received ?? null;
@@ -127,8 +155,17 @@ const Dashboard = ({ setCurrentScreen }) => {
 
   const addDl = (e) => {
     e.preventDefault();
-    if (!deadlineTitle.trim() || !deadlineDate) return;
-    addDeadline(deadlineTitle.trim(), deadlineDate, deadlineCourse.trim());
+    if (!deadlineTitle.trim() || !deadlineDate) {
+      setDeadlineErr('Add a title and date.');
+      return;
+    }
+    const chosenCourse = (deadlineCourse || '').trim();
+    if (courseNames.length > 0 && !chosenCourse) {
+      setDeadlineErr('Choose a course for this deadline.');
+      return;
+    }
+    setDeadlineErr('');
+    addDeadline(deadlineTitle.trim(), deadlineDate, chosenCourse);
     setDeadlineTitle('');
     setDeadlineDate('');
     setDeadlineCourse('');
@@ -263,7 +300,7 @@ const Dashboard = ({ setCurrentScreen }) => {
                         </p>
                         <p className="text-sm text-gray-500 mt-0.5">
                           {item.minutes ? `${item.minutes} min` : ''}
-                          {item.priority ? ` · ${item.priority} priority` : ''}
+                          {` · ${effectivePriority(item, deadlines)} priority`}
                         </p>
                       </div>
                     </li>
@@ -323,15 +360,15 @@ const Dashboard = ({ setCurrentScreen }) => {
                             {item.minutes ? (
                               <span className="text-xs text-gray-500">{item.minutes} min</span>
                             ) : null}
-                            {item.priority ? (
+                            {effectivePriority(item, deadlines) ? (
                               <span
                                 className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                                  item.priority === 'high'
+                                  effectivePriority(item, deadlines) === 'high'
                                     ? 'bg-emerald-100 text-emerald-800'
                                     : 'bg-amber-100 text-amber-800'
                                 }`}
                               >
-                                {item.priority}
+                                {effectivePriority(item, deadlines)}
                               </span>
                             ) : null}
                           </div>
@@ -352,23 +389,51 @@ const Dashboard = ({ setCurrentScreen }) => {
               <input
                 type="text"
                 value={deadlineTitle}
-                onChange={(e) => setDeadlineTitle(e.target.value)}
+                onChange={(e) => {
+                  setDeadlineTitle(e.target.value);
+                  if (deadlineErr) setDeadlineErr('');
+                }}
                 placeholder="Midterm, assignment"
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
               />
-              <input
-                type="text"
-                value={deadlineCourse}
-                onChange={(e) => setDeadlineCourse(e.target.value)}
-                placeholder="Course code (optional)"
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-              />
+              {courseNames.length > 0 ? (
+                <select
+                  value={deadlineCourse}
+                  onChange={(e) => {
+                    setDeadlineCourse(e.target.value);
+                    if (deadlineErr) setDeadlineErr('');
+                  }}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                >
+                  <option value="">Choose course</option>
+                  {courseNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={deadlineCourse}
+                  onChange={(e) => {
+                    setDeadlineCourse(e.target.value);
+                    if (deadlineErr) setDeadlineErr('');
+                  }}
+                  placeholder="Course (optional)"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                />
+              )}
               <input
                 type="date"
                 value={deadlineDate}
-                onChange={(e) => setDeadlineDate(e.target.value)}
+                onChange={(e) => {
+                  setDeadlineDate(e.target.value);
+                  if (deadlineErr) setDeadlineErr('');
+                }}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
               />
+              {deadlineErr && <p className="text-xs text-red-600">{deadlineErr}</p>}
               <button
                 type="submit"
                 className="w-full bg-indigo-600 text-white text-sm font-semibold py-2 rounded-lg hover:bg-indigo-700"

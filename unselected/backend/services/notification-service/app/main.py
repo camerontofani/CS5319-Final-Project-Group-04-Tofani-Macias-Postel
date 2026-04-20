@@ -1,4 +1,4 @@
-"""Demo notification service: in-memory event log (optional fan-out from gateway)."""
+"""notification service with in memory event list"""
 
 from datetime import datetime, timezone
 from threading import Lock
@@ -26,7 +26,7 @@ def health():
 
 @app.post("/internal/notify")
 def notify(payload: dict):
-    """Gateway can POST here after check-ins, plan generation, etc. (demo / optional)."""
+    """store one event from gateway"""
     entry = {
         "receivedAt": datetime.now(timezone.utc).isoformat(),
         **payload,

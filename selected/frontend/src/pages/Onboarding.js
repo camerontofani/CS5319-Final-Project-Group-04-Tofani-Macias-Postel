@@ -84,7 +84,7 @@ const Onboarding = ({ setCurrentScreen }) => {
   const [aiPriority, setAiPriority] = useState(true);
   const [formError, setFormError] = useState(null);
 
-  // Only when server snapshot is ready — do not depend on courseSetupDraft/plan or PATCH echoes retrigger this.
+  // load saved form once when data is ready
   useLayoutEffect(() => {
     if (!appDataReady || formHydratedRef.current) return;
     formHydratedRef.current = true;
@@ -102,12 +102,11 @@ const Onboarding = ({ setCurrentScreen }) => {
         setAiPriority,
       });
     }
-    // After hydrate (sync state updates flush), seed sync cursor so the draft useEffect does not PATCH
-    // stale empty defaults over the user's saved courses on the same tick as refresh.
+    // set draft marker so old defaults do not patch
     queueMicrotask(() => {
       lastSyncedDraftJson.current = JSON.stringify(draftPayloadRef.current);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: hydrate once when appDataReady flips true
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once after appDataReady
   }, [appDataReady]);
 
   const toggleHour = useCallback((day, hour) => {

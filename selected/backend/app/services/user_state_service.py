@@ -1,4 +1,4 @@
-"""Load / merge per-user app state (study plan, drafts, groups, etc.)."""
+"""load and merge per user app state"""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ ALLOWED_TOP_LEVEL_KEYS = frozenset(
 
 
 def default_study_groups(uid: int) -> list[dict[str, Any]]:
-    """Same demo groups as the frontend had in localStorage."""
+    """default study groups"""
     return [
         {
             "id": f"{uid}-g1",
@@ -128,7 +128,7 @@ def _ensure_row(db: Session, user_id: int) -> UserAppState:
 
 
 def _merged_state_dict(db: Session, user_id: int, row: UserAppState) -> dict[str, Any]:
-    """Single merge pass from an existing row (avoids double _ensure_row in patch_state)."""
+    """merge defaults with stored state from one row"""
     base = default_state(user_id)
     stored = row.state if isinstance(row.state, dict) else {}
     out = {**base, **stored}
@@ -141,13 +141,13 @@ def _merged_state_dict(db: Session, user_id: int, row: UserAppState) -> dict[str
 
 
 def get_merged_state(db: Session, user_id: int) -> dict[str, Any]:
-    """Return full state with defaults for missing keys."""
+    """return full state with defaults for missing keys"""
     row = _ensure_row(db, user_id)
     return _merged_state_dict(db, user_id, row)
 
 
 def patch_state(db: Session, user_id: int, partial: dict[str, Any]) -> dict[str, Any]:
-    """Merge allowed top-level keys into stored state."""
+    """merge allowed top level keys into stored state"""
     row = _ensure_row(db, user_id)
     current = _merged_state_dict(db, user_id, row)
     for k, v in partial.items():
@@ -164,7 +164,7 @@ def set_plan_and_clear_draft(db: Session, user_id: int, plan: dict[str, Any]) ->
 
 
 def append_progress_log(db: Session, user_id: int, payload: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Append one log entry; persist loggedAt server-side."""
+    """append one log entry and save loggedAt"""
     current = get_merged_state(db, user_id)
     logs = list(current.get("progressLogs") or [])
     entry = {

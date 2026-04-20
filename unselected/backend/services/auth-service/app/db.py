@@ -1,9 +1,11 @@
 from collections.abc import Generator
+from pathlib import Path
 
 from sqlalchemy import JSON, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
-DATABASE_URL = "sqlite:///./auth_service.db"
+DB_PATH = Path(__file__).resolve().parent.parent / "auth_service.db"
+DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

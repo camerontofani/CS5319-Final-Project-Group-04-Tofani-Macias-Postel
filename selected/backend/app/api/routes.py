@@ -28,9 +28,10 @@ def patch_user_state(body: dict, user: User = Depends(get_current_user), db: Ses
 
 @api_router.post("/plans/generate")
 def plans_generate(payload: dict, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    plan_dict = create_study_plan(payload)
+    state = get_merged_state(db, user.id)
+    plan_dict = create_study_plan(payload, deadlines=state.get("deadlines") or [])
     set_plan_and_clear_draft(db, user.id, plan_dict)
-    # One round trip: client syncs from userState without a separate GET.
+    # return full state so client skips extra get
     return {"plan": plan_dict, "userState": get_merged_state(db, user.id)}
 
 
@@ -45,5 +46,6 @@ def groups_checkin(payload: dict, user: User = Depends(get_current_user), db: Se
 
 
 @api_router.post("/ai/recommend")
-def ai_recommend(payload: dict, _user: User = Depends(get_current_user)):
-    return get_ai_recommendation(payload)
+def ai_recommend(payload: dict, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    state = get_merged_state(db, user.id)
+    return get_ai_recommendation(payload, state)

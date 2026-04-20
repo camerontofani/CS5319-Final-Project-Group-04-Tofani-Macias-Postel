@@ -208,9 +208,17 @@ async def progress_log(request: Request, user_id: Annotated[int, Depends(get_use
     settings = get_settings()
     client: httpx.AsyncClient = app.state.http
     h = internal_headers(user_id)
-    r = await client.post(f"{settings.progress_service_url}/internal/log", json=payload, headers=h)
-    r.raise_for_status()
-    return r.json()
+    try:
+        r = await client.post(
+            f"{settings.progress_service_url}/internal/log",
+            json=payload,
+            headers=h,
+            timeout=8.0,
+        )
+        r.raise_for_status()
+        return r.json()
+    except httpx.RequestError:
+        raise HTTPException(status_code=503, detail="progress service unavailable")
 
 
 @app.post("/api/groups/checkin")
@@ -236,10 +244,13 @@ async def groups_checkin(request: Request, user_id: Annotated[int, Depends(get_u
 
 @app.post("/api/ai/recommend")
 async def ai_recommend(request: Request, user_id: Annotated[int, Depends(get_user_id)]):
-    _ = user_id
     payload = await request.json()
     settings = get_settings()
     client: httpx.AsyncClient = app.state.http
-    r = await client.post(f"{settings.ai_service_url}/internal/recommend", json=payload)
+    state = await aggregate_user_state(client, user_id)
+    r = await client.post(
+        f"{settings.ai_service_url}/internal/recommend",
+        json={**payload, "userState": state},
+    )
     r.raise_for_status()
     return r.json()

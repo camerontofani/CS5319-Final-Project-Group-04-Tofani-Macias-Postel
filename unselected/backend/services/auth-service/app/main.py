@@ -76,7 +76,7 @@ def me(user: User = Depends(get_current_user)):
     return user_out(user)
 
 
-# Internal (gateway only — localhost / trusted network in demo)
+# internal route for gateway
 def _user_from_internal_header(x_user_id: str | None, db: Session) -> User:
     if not x_user_id:
         raise HTTPException(status_code=400, detail="X-User-Id required")

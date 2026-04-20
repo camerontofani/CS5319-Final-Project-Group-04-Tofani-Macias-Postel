@@ -30,8 +30,10 @@ function hoursLast7Days(logs) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   for (const log of logs) {
-    if (!log.loggedAt) continue;
-    const d = new Date(log.loggedAt);
+    const ts = log.started_at || log.loggedAt;
+    if (!ts) continue;
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) continue;
     d.setHours(0, 0, 0, 0);
     const diffDays = Math.round((today.getTime() - d.getTime()) / 86400000);
     if (diffDays >= 0 && diffDays <= 6) {
@@ -76,7 +78,6 @@ const Progress = () => {
   const [notes, setNotes] = useState('');
   const [confidence, setConfidence] = useState('3');
   const [sessionTime, setSessionTime] = useState('');
-  const [priority, setPriority] = useState('medium');
   const [localErr, setLocalErr] = useState(null);
   const [saveOk, setSaveOk] = useState(false);
 
@@ -131,7 +132,6 @@ const Progress = () => {
         topic: topic.trim(),
         task_completed: notes.trim() || undefined,
         confidence: Number(confidence) || undefined,
-        priority: priority || undefined,
       };
       if (sessionTime) {
         const d = new Date(sessionTime);
@@ -338,18 +338,6 @@ const Progress = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white"
-            >
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
-          </div>
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Topic / course</label>
             <input
               type="text"
@@ -414,9 +402,6 @@ const Progress = () => {
                 <li key={`${entry.loggedAt}-${idx}`} className="text-sm border border-gray-100 rounded-lg p-3 bg-gray-50">
                   <p className="font-medium text-gray-900">
                     {entry.minutes} min · {entry.topic || 'Session'}
-                    {entry.priority ? (
-                      <span className="text-xs font-normal text-gray-500 ml-2">({entry.priority} priority)</span>
-                    ) : null}
                   </p>
                   {entry.started_at && (
                     <p className="text-xs text-gray-500 mt-1">{new Date(entry.started_at).toLocaleString()}</p>

@@ -81,9 +81,9 @@ def patch_state(
 
 @app.post("/internal/plans/generate")
 def generate_plan(payload: dict, user_id: int = Depends(uid_dep), db: Session = Depends(get_db)):
-    plan_dict = create_study_plan(payload)
     row = _ensure_row(db, user_id)
     current = _merged(db, user_id, row)
+    plan_dict = create_study_plan(payload, deadlines=current.get("deadlines") or [])
     current["plan"] = plan_dict
     current["courseSetupDraft"] = None
     row.state = current

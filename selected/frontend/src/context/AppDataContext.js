@@ -28,14 +28,17 @@ export function AppDataProvider({ children, userId }) {
 
   const syncFromServer = useCallback((s) => {
     if (!s) return;
-    setPlan(s.plan ?? null);
-    setCourseSetupDraftState(s.courseSetupDraft ?? null);
-    setProgressLogs(Array.isArray(s.progressLogs) ? s.progressLogs : []);
-    setDeadlines(Array.isArray(s.deadlines) ? s.deadlines : []);
-    setProfileState(s.profile && typeof s.profile === 'object' ? { ...emptyProfile, ...s.profile } : emptyProfile);
-    setStudyGroupsState(Array.isArray(s.studyGroups) ? s.studyGroups : []);
-    setCompletedTaskKeysState(Array.isArray(s.completedTaskKeys) ? s.completedTaskKeys : []);
-    setGroupDataState(s.groupData && typeof s.groupData === 'object' ? s.groupData : {});
+    const has = (k) => Object.prototype.hasOwnProperty.call(s, k);
+    if (has('plan')) setPlan(s.plan ?? null);
+    if (has('courseSetupDraft')) setCourseSetupDraftState(s.courseSetupDraft ?? null);
+    if (has('progressLogs')) setProgressLogs(Array.isArray(s.progressLogs) ? s.progressLogs : []);
+    if (has('deadlines')) setDeadlines(Array.isArray(s.deadlines) ? s.deadlines : []);
+    if (has('profile')) {
+      setProfileState(s.profile && typeof s.profile === 'object' ? { ...emptyProfile, ...s.profile } : emptyProfile);
+    }
+    if (has('studyGroups')) setStudyGroupsState(Array.isArray(s.studyGroups) ? s.studyGroups : []);
+    if (has('completedTaskKeys')) setCompletedTaskKeysState(Array.isArray(s.completedTaskKeys) ? s.completedTaskKeys : []);
+    if (has('groupData')) setGroupDataState(s.groupData && typeof s.groupData === 'object' ? s.groupData : {});
   }, []);
 
   useEffect(() => {

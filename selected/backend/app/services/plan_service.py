@@ -1,5 +1,6 @@
-# Study plan from courses, hourly availability, and preferences.
-from typing import List, Tuple
+# Study plan from courses, hourly availability, preferences, and deadlines.
+from datetime import date, datetime
+from typing import List, Optional, Tuple
 
 
 def _chunks_from_hours(hours: List[int]) -> List[Tuple[int, int]]:
@@ -20,7 +21,45 @@ def _chunks_from_hours(hours: List[int]) -> List[Tuple[int, int]]:
     return chunks[:3]
 
 
-def create_study_plan(payload: dict) -> dict:
+def _norm(text: str) -> str:
+    return "".join(ch for ch in (text or "").lower() if ch.isalnum())
+
+
+def _days_until(when: str) -> Optional[int]:
+    if not when:
+        return None
+    try:
+        # Handles YYYY-MM-DD and full ISO strings.
+        d = datetime.fromisoformat(str(when).replace("Z", "+00:00")).date()
+    except Exception:
+        try:
+            d = date.fromisoformat(str(when))
+        except Exception:
+            return None
+    return (d - date.today()).days
+
+
+def _course_deadline_days(deadlines: list[dict], course_name: str, course_code: str) -> Optional[int]:
+    name_n = _norm(course_name)
+    code_n = _norm(course_code)
+    best: Optional[int] = None
+    for d in deadlines or []:
+        due = _days_until(str(d.get("date") or ""))
+        if due is None or due < 0:
+            continue
+        d_code = _norm(str(d.get("courseCode") or ""))
+        d_title = _norm(str(d.get("title") or ""))
+        match = False
+        if code_n and d_code and (code_n in d_code or d_code in code_n):
+            match = True
+        if not match and name_n and d_title and (name_n in d_title or d_title in name_n):
+            match = True
+        if match and (best is None or due < best):
+            best = due
+    return best
+
+
+def create_study_plan(payload: dict, deadlines: Optional[list[dict]] = None) -> dict:
     courses = payload.get("courses") or []
     availability = payload.get("availability") or []
     preferences = payload.get("preferences") or {}
@@ -54,6 +93,10 @@ def create_study_plan(payload: dict) -> dict:
         # Prefer the user's session length; don't inflate to a full clock hour (1h slot ≠ 60 min session).
         available_mins = span_hours * 60
         mins = max(30, min(session_len, available_mins))
+        priority = "high" if i % 3 == 0 else "medium"
+        days_to_due = _course_deadline_days(deadlines or [], course_name, code)
+        if days_to_due is not None and days_to_due <= 7:
+            priority = "high"
         sample_tasks.append(
             {
                 "day": day,
@@ -63,7 +106,7 @@ def create_study_plan(payload: dict) -> dict:
                 "courseName": course_name,
                 "task": f"Study session — {course_name}",
                 "minutes": int(mins),
-                "priority": "high" if i % 3 == 0 else "medium",
+                "priority": priority,
             }
         )
 

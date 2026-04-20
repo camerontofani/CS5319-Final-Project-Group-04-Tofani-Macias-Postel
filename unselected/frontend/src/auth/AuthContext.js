@@ -39,8 +39,17 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false;
+    // fallback so startup does not hang on loading
+    const bootstrapTimeout = window.setTimeout(() => {
+      if (!cancelled) {
+        setStoredToken(null);
+        setUser(null);
+        setReady(true);
+      }
+    }, 12000);
     async function hydrate() {
       if (!getStoredToken()) {
+        window.clearTimeout(bootstrapTimeout);
         setReady(true);
         return;
       }
@@ -53,12 +62,14 @@ export function AuthProvider({ children }) {
           setUser(null);
         }
       } finally {
+        window.clearTimeout(bootstrapTimeout);
         if (!cancelled) setReady(true);
       }
     }
     hydrate();
     return () => {
       cancelled = true;
+      window.clearTimeout(bootstrapTimeout);
     };
   }, []);
 

@@ -1,6 +1,36 @@
-# SmartStudy — Microservices (Option 2)
+# SmartStudy — `unselected/` (gateway + microservices)
 
-Same React UI as `selected/`, but the backend is split into separate services behind an API gateway. Each service uses its own SQLite file. The browser only talks to the gateway on port **8000**; the gateway calls services over HTTP and passes `X-User-Id` after validating the JWT.
+Same product surface as `selected/`, but the backend is split into **separate FastAPI processes** behind an **API gateway**. Each service uses its own SQLite file. The browser only talks to the gateway on port **8000**; the gateway calls services over HTTP and passes `X-User-Id` after validating the JWT.
+
+This README only describes the tree under **`unselected/`**; it does not share backend code with `selected/`.
+
+## Folder structure
+
+```
+unselected/
+├── frontend/                     # Create React App (parallel copy to selected)
+│   ├── public/
+│   ├── src/
+│   └── package.json              # proxy → gateway :8000
+│
+├── scripts/
+│   └── run-microservices.sh      # optional: starts gateway + all services
+│
+└── backend/
+    ├── .env.example              # SECRET_KEY (+ optional OPENAI_* for AI service)
+    ├── gateway/                  # single entry :8000, JWT, aggregates user-state
+    │   ├── requirements.txt
+    │   └── app/
+    └── services/
+        ├── auth-service/         # :8101 — users, tokens, profile JSON
+        ├── study-plan-service/   # :8102 — plan, courses, deadlines
+        ├── progress-service/     # :8103 — progress logs
+        ├── group-service/        # :8104 — study groups, check-ins
+        ├── notification-service/ # :8105 — demo notification buffer
+        └── ai-service/           # :8106 — AI recommendations payload
+```
+
+Each service is a small FastAPI app with its own `requirements.txt` and (usually) its own SQLite file next to the working directory when you start `uvicorn`.
 
 ## Architecture
 

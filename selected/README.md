@@ -1,75 +1,106 @@
 # SmartStudy — `selected/` (layered modular backend)
 
-This folder is a **self-contained** copy of the product: React frontend + one FastAPI backend process. The backend is organized in **layers** (API → services → repositories / models → SQLite) so features stay separated even though everything runs in a single app.
+This folder is a **self-contained** copy of the product: React frontend + **one** FastAPI backend process. The backend is organized in **layers** (API → services → repositories / models → SQLite) so features stay separated even though everything runs in a single process.
 
 ## How this relates to the repo
 
 The repository root keeps **two** full implementations side by side (`selected/` and `unselected/`). They do **not** share backend code. This README only describes the tree under **`selected/`**.
 
-## Folder structure
+---
 
-```
-selected/
-├── frontend/                 # Create React App (same UI concepts as unselected)
-│   ├── public/
-│   ├── src/                  # pages, context, components, styles
-│   └── package.json          # dev server; `proxy` → http://127.0.0.1:8000
-│
-└── backend/                  # Single FastAPI application
-    ├── requirements.txt
-    ├── .env.example          # copy to `.env` (SECRET_KEY, optional OPENAI_*)
-    └── app/
-        ├── main.py           # app factory, CORS, DB create on startup
-        ├── api/              # HTTP routes, auth endpoints, dependencies
-        ├── core/             # settings, security (JWT)
-        ├── db/               # SQLAlchemy engine, session, Base
-        ├── models/           # ORM models
-        ├── repositories/     # persistence helpers
-        ├── schemas/          # Pydantic / request–response shapes
-        └── services/         # business logic (auth, plan, progress, groups, AI)
-```
+## Run locally — step-by-step (read this first)
 
-**Frontend** talks only to the backend origin you configure (default: CRA `proxy` to port **8000**). **Backend** exposes `/api/...` routes and uses one SQLite file (created next to where you run `uvicorn`, typically `selected/backend/`).
+**Repository root** means the folder that contains **`selected/`** and **`unselected/`** together. In the examples below, replace `~/SmartStudy` with the path where you cloned the repo (e.g. `/Users/camtofani/SmartStudy`).
 
-## Prerequisites
+### First time on this machine
 
-- Python **3.11+** and `pip`
-- Node.js **18+** and `npm`
-
-## Backend: install and run
-
-From the repo root (or adjust paths):
+**Terminal 1 — backend (port 8000)**
 
 ```bash
-cd selected/backend
+cd ~/SmartStudy/selected/backend
 python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env               # set SECRET_KEY; add OPENAI_API_KEY for live AI
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
-Health check: `http://127.0.0.1:8000/health`
+Leave this running. You should see Uvicorn listening on **http://127.0.0.1:8000**. Check: open or run `curl -s http://127.0.0.1:8000/health` — you should see JSON including `"architecture":"layered-monolith"`.
 
-## Frontend: install and run
+**Terminal 2 — frontend (port 3000 or next free port)**
 
 ```bash
-cd selected/frontend
+cd ~/SmartStudy/selected/frontend
 npm install
 npm start
 ```
 
-Opens **http://localhost:3000** (or the next free port). Ensure the backend is on **8000** or set `REACT_APP_API_URL` / proxy accordingly.
+The first time, **`npm install` is required** (otherwise `react-scripts: command not found`). When CRA opens, use **http://localhost:3000** (or the URL it prints). The app proxies API calls to **http://127.0.0.1:8000** via `package.json` → `proxy`.
+
+**Optional env file (backend):** from `selected/backend`, `cp .env.example .env` and set `SECRET_KEY` and/or `OPENAI_API_KEY` if you need a custom secret or live OpenAI calls. Defaults in code are enough for a quick local run.
+
+### Every later session
+
+**Terminal 1:**
+
+```bash
+cd ~/SmartStudy/selected/backend
+source .venv/bin/activate
+uvicorn app.main:app --reload --port 8000
+```
+
+**Terminal 2:**
+
+```bash
+cd ~/SmartStudy/selected/frontend
+npm start
+```
+
+### Important
+
+- **Do not** run the **`unselected/`** microservice **gateway** at the same time on **port 8000** — only one process can bind there. Stop the `selected` backend before starting `unselected`, and vice versa.
+- **Windows:** use `.venv\Scripts\activate` instead of `source .venv/bin/activate`.
+
+---
+
+## Folder structure
+
+```
+selected/
+├── frontend/                 # Create React App
+│   ├── public/
+│   ├── src/
+│   └── package.json          # `proxy` → http://127.0.0.1:8000
+│
+└── backend/
+    ├── requirements.txt
+    ├── .env.example
+    └── app/
+        ├── main.py
+        ├── api/
+        ├── core/
+        ├── db/
+        ├── models/
+        ├── repositories/
+        ├── schemas/
+        └── services/
+```
+
+**Database:** SQLite file **`selected/backend/smartstudy.db`** (path is fixed relative to the backend package).
 
 ## Optional: production-style frontend build
 
 ```bash
-cd selected/frontend
+cd ~/SmartStudy/selected/frontend
 npm run build
 ```
 
-Serve the `build/` folder with any static host; point API calls at the same backend base URL (CORS is already allowed for localhost dev origins in `app/main.py`).
+Serve the `build/` folder with any static host; point API calls at the same backend base URL (CORS already allows common localhost origins in `app/main.py`).
+
+## Prerequisites (summary)
+
+- Python **3.11+** and `pip`
+- Node.js **18+** and `npm`
 
 ## See also
 
-- `unselected/README.md` — the **other** architecture in this repo (gateway + separate services), with its own frontend copy.
+- `unselected/README.md` — gateway + microservices variant (different backend, own `frontend/` copy).

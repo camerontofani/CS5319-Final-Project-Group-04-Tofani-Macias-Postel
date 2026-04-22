@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core import create_access_token, decode_token, get_settings, hash_password, verify_password
@@ -56,7 +57,11 @@ def signup(body: SignupRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="email already registered")
     user = User(email=body.email, hashed_password=hash_password(body.password), profile={})
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="email already registered") from None
     db.refresh(user)
     token = create_access_token(subject=user.email, user_id=user.id)
     return TokenResponse(access_token=token, user=user_out(user))

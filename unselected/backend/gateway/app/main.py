@@ -107,15 +107,34 @@ async def _forward_auth_header(request: Request) -> dict[str, str]:
     return {"Authorization": auth}
 
 
+def _upstream_error_detail(r: httpx.Response) -> str:
+    """Avoid gateway 500 if upstream body is not JSON."""
+    ct = r.headers.get("content-type", "")
+    if not ct.startswith("application/json"):
+        return (r.text or "").strip() or f"upstream HTTP {r.status_code}"
+    try:
+        j = r.json()
+    except ValueError:
+        return (r.text or "").strip() or f"upstream HTTP {r.status_code}"
+    d = j.get("detail", j)
+    if isinstance(d, list):
+        return ", ".join(str(x.get("msg", x)) if isinstance(x, dict) else str(x) for x in d)
+    return str(d) if d is not None else (r.text or f"upstream HTTP {r.status_code}")
+
+
 # --- Auth (public) ---
 @app.post("/api/auth/signup")
 async def auth_signup(request: Request):
     body = await request.json()
     settings = get_settings()
-    r = await app.state.http.post(f"{settings.auth_service_url}/signup", json=body)
+    url = f"{settings.auth_service_url}/signup"
+    try:
+        r = await app.state.http.post(url, json=body)
+    except httpx.RequestError as e:
+        logger.exception("auth signup: cannot reach %s", url)
+        raise HTTPException(status_code=503, detail=f"auth service unreachable ({url}): {e}") from e
     if r.status_code >= 400:
-        detail = r.json().get("detail", r.text) if r.headers.get("content-type", "").startswith("application/json") else r.text
-        raise HTTPException(status_code=r.status_code, detail=detail)
+        raise HTTPException(status_code=r.status_code, detail=_upstream_error_detail(r))
     return r.json()
 
 
@@ -123,13 +142,14 @@ async def auth_signup(request: Request):
 async def auth_login(request: Request):
     body = await request.json()
     settings = get_settings()
-    r = await app.state.http.post(f"{settings.auth_service_url}/login", json=body)
+    url = f"{settings.auth_service_url}/login"
+    try:
+        r = await app.state.http.post(url, json=body)
+    except httpx.RequestError as e:
+        logger.exception("auth login: cannot reach %s", url)
+        raise HTTPException(status_code=503, detail=f"auth service unreachable ({url}): {e}") from e
     if r.status_code >= 400:
-        try:
-            detail = r.json().get("detail", r.text)
-        except Exception:
-            detail = r.text
-        raise HTTPException(status_code=r.status_code, detail=detail)
+        raise HTTPException(status_code=r.status_code, detail=_upstream_error_detail(r))
     return r.json()
 
 

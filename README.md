@@ -8,25 +8,40 @@
 
 SmartStudy is an AI-powered educational tool designed to help university students optimize their learning through adaptive scheduling, progress tracking, and group collaboration. The system analyzes course workloads and student performance data to suggest the most efficient study paths.
 
-## 2. Architecture Folder Structure
+## 2. Using the application (brief walkthrough)
+
+Use either **`selected/`** or **`unselected/`** with its backend running and the matching frontend (`npm start`). Both UIs behave the same at a high level.
+
+1. **Create an account** or **sign in** on the login screen.
+2. Set up **courses** (course setup / draft) as the app prompts—this feeds deadlines and workload context.
+3. Open **Study Plan** (or the plan view) to see your schedule and tasks derived from those courses.
+4. Go to **AI Recommendations** (or similar), **request suggestions**, and wait for them to finish loading (especially if using a live LLM with `OPENAI_API_KEY` configured).
+5. **Accept** or apply the suggestions so they merge into your **study plan** and appear on the plan views.
+6. Optionally explore **progress** logging, **study groups**, and related pages as implemented in the UI.
+
+*(Exact labels depend on the React pages; configure `OPENAI_*` in the backend `.env` if you want real AI responses instead of falling back behavior.)*
+
+## 3. Architecture folder structure
 
 Per the project requirements, this repository contains two complete architectural implementations for comparison:
 
-- **`/selected`**: Layered monolithic architecture (recommended architecture choice)—one FastAPI application with clear internal layers (API, services, persistence).
-- **`/unselected`**: Microservices architecture—API gateway plus independent FastAPI services, each with its own SQLite database file.
+- **`/selected`**: **Layered modular architecture** (recommended)—**one** FastAPI deployable with explicit **presentation (API) → application services → persistence/models** separation. See terminology note below.
+- **`/unselected`**: **Microservices**—API gateway plus independent FastAPI services, each with its own SQLite database file where stateful.
 
-## 3. Implementation Platform
+**Terminology:** In discussion, **“monolith”** sometimes means an **undifferentiated** codebase with **no internal structure**, which is often criticized as hard to scale or refactor. **`selected/`** is **not** that design: it is **layered and modular** inside **one process**. That yields **maintainable boundaries** (routes, services, repositories) while keeping **one deployment unit**—you can still **scale out** replicas or **extract** a layer into a separate service later. We use **“layered”** / **“layered modular”** to describe this style and avoid implying a single opaque ball of code.
+
+## 4. Implementation platform
 
 - **Frontend:** React (Create React App), **Node.js v18+**
 - **Backend:** **Python 3.11+**, **FastAPI**, Uvicorn
 - **Database:** **SQLite** (one database file for the layered `selected/` backend; one SQLite file per service in `unselected/`)
-- **Platform configuration:** Ensure `node`, `npm`, and `python3` are on your system `PATH`. For the microservices version in this repo, services run as separate **Uvicorn** processes (optional helper script under `unselected/scripts/`). **Docker is not used** in this submission—there is no `docker-compose` file; see section 4B and `unselected/README.md` for the exact commands.
+- **Platform configuration:** Ensure `node`, `npm`, and `python3` are on your system `PATH`. For the microservices version in this repo, services run as separate **Uvicorn** processes (optional helper script under `unselected/scripts/`). **Docker is not used** in this submission—there is no `docker-compose` file; see section 5 and `unselected/README.md` for the exact commands.
 
-## 4. Setup & Execution Instructions
+## 5. Setup & execution instructions
 
 Use **copy-paste commands** with **your clone path** instead of `~/SmartStudy` if different. The **repository root** is the folder that contains both **`selected/`** and **`unselected/`**.
 
-### A. Selected architecture (layered monolith) — `selected/`
+### A. Selected architecture (layered modular) — `selected/`
 
 **Full step-by-step (first time + every session, port numbers, health check):** see **`selected/README.md`**.
 
@@ -89,11 +104,11 @@ npm install
 npm start
 ```
 
-## 5. Architectural Rationale & Comparison
+## 6. Architectural rationale & comparison
 
-**Rationale for selecting the layered monolith (`/selected`):**
+**Rationale for selecting the layered modular design (`/selected`):**
 
-After implementing and comparing both candidate styles, Group 4 recommends the layered monolith for the SmartStudy platform based on the following architectural drivers:
+After implementing and comparing both candidate styles, Group 4 recommends this design for the SmartStudy platform based on the following architectural drivers:
 
 - **Development velocity:** As a three-person team within a semester, a single codebase and unified data model reduced coordination overhead at service boundaries and supported faster feature iteration.
 - **System performance for this workload:** AI recommendations and study-plan data are tightly coupled. In the layered design, related logic composes through in-process calls. In the microservices version, gateway and inter-service HTTP calls added latency that was noticeable for interactive flows.

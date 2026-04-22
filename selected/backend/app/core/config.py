@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -9,6 +10,8 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-change-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7
+    openai_api_key: Optional[str] = None
+    openai_model: str = "gpt-4o-mini"
 
 
 @lru_cache
